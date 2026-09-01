@@ -54,11 +54,11 @@ get variety from per-instance scale and rotation instead — packing every varia
 times the file for no more to look at.
 
 Prefer neutral-painted props where you can. A grey rock takes a per-instance tint to lunar dust
-or Martian rust without touching the atlas, so one scatter recipe dresses every world.
+or Martian rust without touching the atlas, so one scatter recipe dresses every setting.
 
 ## Draw what a texture cannot be
 
-Some surfaces have to take a runtime colour — a plot deck tinted to its owner's accent — and a
+Some surfaces have to take a runtime colour — a region's ground tinted to whoever owns it — and a
 painted texture cannot. Draw those to a canvas at boot instead. Author them neutral grey so the
 material's colour multiplies through cleanly, and derive a normal map from the same height field
 you drew (see `rendering-traps.md`).

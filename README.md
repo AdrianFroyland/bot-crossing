@@ -607,15 +607,21 @@ Colony state lives in `data/colony.json` — where each zone sits and what you a
 Deleting it only loses the archive list and the map's arrangement; the threads themselves are
 untouched, and the colony lays itself out again from scratch.
 
-## Rebuilding it from scratch
+## Building your own
 
-`.claude/skills/build-bot-crossing/` is a skill that documents how this was built — the order to
-build it in, the handful of decisions that carry the whole thing, and the dozen rendering traps
-that each cost half a day to rediscover. Point an agent at it, or just read it: the reference
-files on [rendering](.claude/skills/build-bot-crossing/references/rendering-traps.md),
-[harness adapters](.claude/skills/build-bot-crossing/references/harness-adapters.md) and the
-[asset pipeline](.claude/skills/build-bot-crossing/references/asset-pipeline.md) are the parts
-worth having whether or not you ever build this particular thing.
+Bot Crossing is one shape this idea can take. `.claude/skills/agent-session-world/` is a skill
+for building others — a village, an aquarium, a workshop, whatever metaphor you like — driven by
+the same underlying idea: your agent sessions already have state, and that state reads better as
+a place than as a list.
+
+It covers picking the mapping from session state to world state, the order to build in, and the
+handful of decisions that carry the whole thing — instancing a crowd into one draw call, layouts
+that stay put instead of reshuffling, and reading a coding agent's session files without
+disturbing them. The reference files on
+[rendering](.claude/skills/agent-session-world/references/rendering-traps.md),
+[harness adapters](.claude/skills/agent-session-world/references/harness-adapters.md) and the
+[asset pipeline](.claude/skills/agent-session-world/references/asset-pipeline.md) stand on their
+own whether or not you build anything like this.
 
 ## Who made this
 

@@ -1,7 +1,10 @@
 # Rendering traps
 
 Each of these looks like a small detail and is not. They are ordered roughly by when you will
-hit them.
+hit them while building.
+
+Nothing here is three.js-specific trivia — most of it applies to any engine drawing a crowd of
+small things on uneven ground.
 
 ## Contents
 
