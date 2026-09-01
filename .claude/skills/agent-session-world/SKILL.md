@@ -188,13 +188,22 @@ is a pure function of the thread list plus a little persisted memory about where
 
 Two invariants inside that:
 
-**One instanced draw for the whole crowd.** three.js skins a `SkinnedMesh` from a `Skeleton` per
-character, so hundreds of threads means hundreds of draw calls and hundreds of skeletons stepped
-on the CPU every frame. Bake the animation instead — sample every clip once at load, write each
-frame's bone matrices into a float texture, give each instance one number for the frame it is on,
-and skin in the vertex shader upstream of instancing. The crowd becomes one draw whether there are
-six of them or six hundred. This is architectural and painful to retrofit, so do it from the first
-inhabitant, whatever species it is.
+**One instanced draw for the whole crowd.** Skeletal animation is per-character by default in
+every engine: one skinned mesh bound to one skeleton, evaluated on the CPU each frame. Hundreds of
+threads then means hundreds of draw calls and hundreds of skeletons stepped every frame, which is
+where this kind of project usually dies.
+
+Bake the animation instead. Sample every clip once at load, write each frame's bone matrices into
+a texture, give each instance a single number — the frame it is on — and do the skinning in the
+vertex shader, upstream of whatever the engine uses to place instances, so the skinned vertex
+still gets the per-instance transform. The crowd becomes one draw whether there are six of them or
+six hundred.
+
+In three.js that means skinning before `instanceMatrix` is applied rather than letting
+`SkinnedMesh` and `Skeleton` do it; other engines have their own name for the same seam, and the
+thing to search for is animation-texture or vertex-animation-texture instancing. This is
+architectural and painful to retrofit, so do it from the first inhabitant, whatever species it
+is.
 
 **One writer for anything persisted.** The page owns the world-state file and writes it whole; the
 server only touches the agent's own records. If both write it, a save from a page holding older

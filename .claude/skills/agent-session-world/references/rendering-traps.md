@@ -3,8 +3,11 @@
 Each of these looks like a small detail and is not. They are ordered roughly by when you will
 hit them while building.
 
-Nothing here is three.js-specific trivia — most of it applies to any engine drawing a crowd of
-small things on uneven ground.
+These are engine-agnostic problems. The examples name three.js because a concrete API is more
+use than a vague principle, but every one of them is a property of real-time rendering rather than
+of a library — the equivalent trap exists in Godot, Unity, Unreal and bare WebGPU, usually under a
+different name. Where a specific call is mentioned, the sentence before it says what the call is
+*for*, so the advice survives the translation.
 
 ## Contents
 
@@ -56,7 +59,9 @@ These two are opposites and both are correct:
 **Open procedural shells** — bowls, engine bells, collars — need double-sided rendering, or you
 look straight through them. They also cannot shadow-map single-sided: from the light, a concave
 interior is a back face at exactly its own depth, so it self-shadows to solid black whichever
-cull mode the depth pass uses. Draw them double-sided with a `BackSide` shadow side.
+cull mode the depth pass uses. Draw them double-sided, and render their shadow pass from the
+back faces — in three.js that is `shadowSide: BackSide`; elsewhere look for whichever setting
+controls which faces the depth-only pass keeps.
 
 **Closed kit models** must be single-sided, for the opposite reason. Modular kits are stacked
 boxes, which leaves a floor and the ceiling beneath it sharing a plane all over the set. Drawn
@@ -71,8 +76,8 @@ pair, never up/up.
 
 **Bake the animation into a bone-matrix texture.** Sample each clip at a fixed rate, write every
 frame's skinning matrices into a float texture, and give each instance one float: the frame it
-is on. Skin in the vertex shader *before* three's instancing so the result still passes through
-`instanceMatrix`.
+is on. Skin in the vertex shader *before* the per-instance transform is applied, so the skinned
+vertex still gets placed by it — in three.js that means running ahead of `instanceMatrix`.
 
 **Bake non-looping clips a millisecond short of their duration.** Sampled at exactly `duration`,
 the mixer's default loop mode wraps to the start — so the frame a sit-down or a spawn is meant
@@ -129,9 +134,10 @@ machine the point is to give the memory back.
 
 ## Post-processing
 
-**Buffer parity will bite you.** `EffectComposer` keeps its read/write buffers between frames,
-and passes that do not request a swap render into the *read* buffer. A chain with an odd number
-of swaps therefore alternates which target holds the scene from frame to frame. Any pass that
+**Buffer parity will bite you.** Any ping-pong post chain that carries its read/write targets
+across frames — three.js's `EffectComposer` is one, but the pattern is universal — will alternate
+which target holds the scene if the number of swaps per frame is odd. Passes that do not request a
+swap write into the *read* buffer, which is what makes the count odd without it being obvious. Any pass that
 samples the depth texture must ask which buffer it is in *this* frame rather than binding one
 target once at construction — otherwise every other frame samples last frame's depth, which
 looks like the whole picture strobing rather than like a depth bug.
@@ -142,8 +148,10 @@ bottom stay smeared anyway. Read the depth buffer, blur by distance from a plane
 put the plane on whatever the camera is orbiting so the subject is sharp at any zoom. Tilting
 that plane is what a real tilt-shift lens does, and it is one dot product.
 
-Attaching a depth texture to the composer's target costs one attachment; asking three's
-`BokehPass` for the same thing costs a second pass over the whole scene.
+Attaching a depth texture to the target you already render into costs one attachment. Reach for
+a built-in depth-of-field pass only after checking what it does to get depth — several, including
+three.js's `BokehPass`, render the entire scene a second time with a depth material, which is a
+steep price for something the main pass could have written for free.
 
 **A separable gaussian's taps must be spaced as a fraction of the radius.** Kernels with fixed
 offsets assume a roughly one-pixel step; scaled up to a twenty-pixel radius the taps drift apart
@@ -168,10 +176,15 @@ procedural shapes hide this; a kit of flat-walled modules does not.
 
 ## Transforms and timing
 
-**`matrixWorld` only refreshes during a render.** Anything that reads a world position after
-moving objects but before drawing gets a stale matrix — often the identity, which resolves local
-coordinates as world ones and silently places things at the origin. If you reposition the world
-and then immediately need a world-space point from it, force the update first.
+**World transforms are usually only recomputed as part of drawing.** Scene graphs propagate
+parent transforms down to children lazily, at render time, because doing it eagerly on every
+change would be wasteful. So anything that reads a world position after moving objects but before
+drawing gets a stale matrix — often the identity, which quietly resolves local coordinates as
+world ones and puts things at the origin.
+
+If you reposition the world and immediately need a world-space point out of it, force the update
+first. In three.js that is `scene.updateMatrixWorld(true)`; the general shape is "ask the scene
+graph to flush before you query it".
 
 This is especially easy to hit in offline/scripted rendering, where you may run many simulation
 steps between draws.
