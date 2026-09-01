@@ -1,217 +1,240 @@
 ---
 name: agent-session-world
 description: >-
-  Build a small living world driven by your own coding-agent sessions — a colony, a village,
-  an aquarium, an office, a city block — where each thread is a character doing something and
-  the world reflects what is actually happening on your machine. Use this whenever someone
-  wants to make a game, toy, ambient display, screensaver or dashboard out of their Claude
-  Code / Codex / OpenCode sessions, turn their agent threads into characters or creatures,
-  visualise many concurrent sessions spatially instead of as a list, or add a new harness to
-  an existing one. Also reach for it for the hard parts on their own — instancing hundreds of
-  animated characters in one draw call, spatial layouts that stay put instead of reshuffling,
-  reading agent session state off disk, or atlas-driven shading and depth of field in three.js.
+  Build someone a living 3D world out of their own coding-agent sessions, in whatever form they
+  ask for — little robots on a moon, fish in a reef, animals in a forest, villagers, ants, boats
+  in a harbour. Each thread becomes an inhabitant, each project becomes somewhere for them to
+  live, and what a thread is really doing decides what its inhabitant does. This skill supplies
+  the structure that makes any version of it work — the mapping from session state to world
+  state, layouts that stay put, one draw call for a crowd, a Google-Earth camera, day and night,
+  PBR and image-based lighting, depth of field, quality presets, and click-to-interact — while
+  leaving the setting and the creatures entirely up to whoever is asking. Use it whenever someone
+  wants a game, toy, ambient display, screensaver or spatial dashboard made from their Claude
+  Code / Codex / OpenCode threads, wants their agents shown as characters or creatures instead of
+  a list, or needs any single piece of that — instancing hundreds of animated characters, reading
+  agent session state off disk, or making a real-time scene look good.
 ---
 
-# Worlds built from your coding sessions
+# Worlds built from coding sessions
 
-The idea is simple and holds up in a lot of shapes: the agent sessions on your machine already
-have state — running, waiting on you, errored, idle, finished — and that state is far more fun
-to look at as *a place* than as a list. Give each thread a character, give each repo somewhere
-to live, and let what the thread is doing decide what the character does.
+Somebody arrives with an idea. *"I want my agents to be little fish."* *"Can it be a forest with
+animals?"* *"Robots on a moon."* Your job is to build that — a small 3D world they leave open on a
+second monitor, where every coding-agent thread on their machine is an inhabitant, every project
+they work on is somewhere for those inhabitants to live, and what each thread is genuinely doing
+decides what its inhabitant is doing.
 
-Bot Crossing, the project in this repo, is one instance: a space colony where each thread is an
-astronaut building on its repo's plot. It could as easily be fish in a tank, villagers in a
-valley, or workers in a workshop. The metaphor is yours. Almost everything below is the same
-regardless of which one you pick.
+**The metaphor is theirs. The structure is always the same.** A reef and a moon base differ in
+models, palette and vocabulary, and in almost nothing else: both need a layout that does not
+reshuffle, one draw call for the whole crowd, a single source of truth for state, and a camera
+that feels like it has weight. This skill is that structure. Do not talk anyone out of their
+metaphor — take it and fill in the frame.
 
-## Pick the metaphor, then the mapping
+Two principles hold across every version, and they are what separate this from a dashboard with a
+3D skin:
 
-The metaphor matters much less than the mapping. Before writing anything, fill in a table like
-this for your world, because it is the actual design:
+**Everything visible means something.** An inhabitant rests because its thread has gone quiet, not
+because resting looks nice. A structure is large because that thread has done a lot of work. The
+moment decoration and data mix, none of it can be trusted and the whole thing becomes wallpaper.
 
-| The world | Your sessions |
+**It has to be pleasant when nothing is happening.** Most threads are idle most of the time. A
+world someone is happy to leave open while quiet is the entire point — so spend the effort on
+ambient life and light, and save the loud signals for the one inhabitant that actually wants them.
+
+## Start by capturing their concept
+
+Before any code, get four things. One round of questions, with your own suggestions attached so
+they can just say "yes" — this is meant to take a minute, not to be an interrogation.
+
+1. **What lives here?** The inhabitant. One per thread.
+2. **What is the setting?** Determines terrain, sky, palette, and what "night" means.
+3. **What does a project's home look like?** The territory one project owns — an island, a
+   clearing, a hex of ground, a reef shelf, a district.
+4. **What does working look like here?** The single most important animation, and the one that has
+   to read from across the map.
+
+If they are vague, propose something concrete and start building; a running world is a far better
+prompt for their opinions than a questionnaire. Expect the metaphor to shift once they see it
+moving, and keep the art layer separable so that stays cheap.
+
+Write their answers down somewhere in the project. Everything after refers back to it.
+
+## The mapping is the actual design
+
+Fill in this table for their world. It is the whole design document, and it is worth agreeing
+before modelling anything.
+
+| The world | Their sessions |
 | --- | --- |
-| One region / zone / tank | One repo |
-| One character | One thread |
-| How built-up its dwelling looks | How much work the thread has done |
-| A character stopping and waiting | The thread needs your reply |
-| A character slumped or sparking | The thread errored |
-| Walking in from somewhere | The thread just appeared |
-| Walking off | You archived it |
+| One territory | One project or repo |
+| One inhabitant | One thread |
+| How developed its structure looks | How much work that thread has done |
+| An inhabitant stopping and asking | The thread needs a reply |
+| Arriving from somewhere | A thread just appeared |
+| Leaving | It was archived |
 
-Two rules make this feel alive rather than arbitrary:
+## States: the same six, in any costume
 
-**Every visible thing should mean something.** If a character sits down, it should be because
-that thread has been quiet, not because sitting looks nice. The moment decoration and data mix,
-you stop trusting any of it.
+This is the heart of it, and it is where the metaphor does its work. Decide state **once**, in one
+ordered function — first match wins — and have the world and any UI both read it. If two places
+can disagree about what a thread is doing, eventually they will, and an inhabitant happily working
+next to a panel saying it crashed destroys trust in everything else on screen.
 
-**Only signal what wants attention.** With most of a real thread list sitting idle, a badge over
-every head buries the one you need to see. Reserve the loud states for the ones that actually
-want you.
+The order is worth reasoning about rather than copying. Errored outranks working because a thread
+that fell over mid-run is stuck, not busy. Waiting sits below working because a thread that is
+still running is not waiting on anyone yet.
 
-## What you are building
+| Thread state | What it must read as | Fish | Woodland animals | Robots |
+| --- | --- | --- | --- | --- |
+| Errored | Something is wrong, visible at distance | Lists sideways, colour drains | Sits, ears flat | Slumps, eyes red |
+| Working now | Busy and purposeful | Darting, sediment kicked up | Carrying, digging | Hammering, sparks |
+| Finished well | Good news, worth a glance | Loops, bright flash | Leaps, tail up | Jumps, confetti |
+| **Waiting on you** | **Asking for you specifically** | Rises and faces the camera | Stands on hind legs | Waves |
+| Untouched for days | Dormant, not dead | Drifts near the bottom | Curled asleep | Sits, `z` |
+| Anything else | Present, unbothered | Mills about the reef | Forages | Potters |
 
-Four layers, worth keeping honestly separate:
+Three rules travel with that table whatever the costume:
 
-1. **A reader.** Finds agent sessions on disk and normalises them into one thread shape. Knows
-   nothing about rendering.
-2. **A mapper.** Turns that thread list into world state — who lives where, what everyone is
-   doing.
-3. **A renderer.** Draws it fast enough that hundreds of characters cost nothing at rest.
-4. **A thin server.** Serves the page, exposes the reader over HTTP, and hands a thread back to
-   its agent when you click it.
+**Locomotion beats status.** Something crossing its territory moves — it does not slide along in a
+working pose. Choose the animation from the distance actually covered last frame rather than the
+velocity intended, because the two come apart the moment something is in the way: collision
+refuses the step while velocity stays high, and anything driven off intent alone walks on the spot
+against a wall.
 
-Layer 1 is the only part that differs per agent. Get that seam right and supporting a second
-one is a single new file; get it wrong and it is a rewrite. See
-`references/harness-adapters.md`.
+**Give the working state a prop.** A tool in hand, a carried item, a mouthful of something. It is
+what lets you read the temperature of the whole map without zooming in, and it is worth more than
+a better model.
+
+**Only signal what wants attention.** Badge the states that want something and nothing else. With
+most of a real thread list quiet, a symbol over every head buries the one that matters.
+
+## What every version needs
+
+These are capabilities rather than designs — how they look is the metaphor's business, but a world
+missing any of them will feel thin.
+
+**Something visible from anywhere when a thread needs a reply.** A light column, a raised flag, a
+plume. Distinct from all other colour, visible at any zoom and through geometry. Pair it with a
+key that flies to the next one waiting. That pairing is what turns the thing from decoration into
+something genuinely used, and it is the highest-value feature in the whole build.
+
+**Territories that stay put.** The obvious approach — sort projects by size, hand out ground in
+order — is wrong in a way that stays invisible until the thing is in use. One new thread changes
+the sort, the sort changes the ground, and the map rearranges. A territory someone was watching
+jumps across the screen because a *different* project gained a thread.
+
+Make the previous arrangement an input to the next. A project needing the same room keeps exactly
+the ground it had; one that grew keeps its ground and claims neighbours; one that shrank gives
+back what it claimed most recently, so growing and shrinking returns it to the shape it started
+in. Only a never-placed project gets placed. Persist it. A map you can learn is the whole reason
+to do this spatially; one that reshuffles is worse than a list.
+
+**Structures that grow with the work.** Whatever a "home" is in this metaphor, how developed it
+looks should track how much that thread has done — transcript size on a log scale reads well.
+Drive it with a shader offset rather than rebuilding geometry, and sink the structure while
+discarding what falls below ground, so a half-grown one is a *whole* structure partly buried.
+Slicing the top off instead guts closed shells and turns a half-finished dome into an empty ring.
+
+**A camera with weight.** Model it on Google Earth, and specifically the two behaviours that make
+Earth feel like Earth: dragging grabs the ground so the point under the cursor stays pinned there
+for the whole drag, and scrolling zooms at the cursor rather than the screen centre. Approximate
+versions feel wrong in a way people notice without being able to name. Add tilt and rotate on
+right-drag, pinch on trackpads, keyboard movement, and a slow optional orbit that yields the
+instant anyone touches the camera and eases back a couple of seconds after they stop.
+
+**Day and night.** The cheapest way to make a static scene feel like a place. Make the sky itself
+the environment map — render a second copy of the sky dome sharing the same uniforms into a
+prefiltered radiance map and bind it as the scene environment. That is what gives materials
+something to reflect, and why the world changes *character* through the day rather than just
+dimming. Light it after dark rather than only darkening it: windows, lamps, glowing edges,
+whatever the metaphor offers. Do not put the sun directly overhead at noon, or every vertical
+surface goes black with only ambient to catch.
+
+**Materials that behave.** PBR throughout, image-based lighting from that sky, bloom with a high
+enough threshold that it picks out lights rather than hazing everything, shadows that track the
+camera rather than covering the world, and depth of field with real bokeh — read the depth buffer
+and blur by distance from a plane of focus, with the plane on whatever the camera is orbiting. A
+screen-space band that blurs the top and bottom of the frame is the cheap fake and it shows the
+moment you zoom in. Shallow focus is also what makes a large scene read as a small model, which is
+usually exactly the feeling wanted.
+
+**A settings panel with presets.** Five steps from lowest to highest, defaulting to a middle one
+that looks good on an ordinary laptop without the fans coming on. Every individual knob adjustable
+underneath, with some mark showing which have been moved away from their preset. Add a governor
+that watches frame time and scales *under* whatever was chosen, about one step per second —
+reacting per frame makes the resolution visibly breathe — and make turning an effect off actually
+release its memory rather than just skipping the pass.
+
+**Click an inhabitant to act on its thread.** Show what it is in a card parked next to it on
+screen, following it as it moves, rather than in a fixed side panel — the answer to "what is this
+one" belongs next to the thing that was clicked. Offer the two actions worth having: open the
+thread in the agent it came from, and archive it. Make arrival and departure small ceremonies, in
+whatever form the metaphor suggests, because a population that visibly changes feels alive where
+one that pops in and out does not.
+
+## The structure underneath
+
+Four layers, kept honestly separate. This part never changes.
+
+1. **A reader** finds the agent's sessions on disk and normalises them into one thread shape.
+   Knows nothing about rendering, and is the only layer that differs per agent —
+   `references/harness-adapters.md` has the interface and the rules for touching somebody's real
+   work safely.
+2. **A mapper** turns the thread list into world state.
+3. **A renderer** draws it fast enough that hundreds of inhabitants cost nothing at rest.
+4. **A thin server** serves the page, exposes the reader, and hands a thread back to its agent.
+
+Poll the reader, diff against what is on screen, add and retire inhabitants accordingly. The world
+is a pure function of the thread list plus a little persisted memory about where things live.
+
+Two invariants inside that:
+
+**One instanced draw for the whole crowd.** three.js skins a `SkinnedMesh` from a `Skeleton` per
+character, so hundreds of threads means hundreds of draw calls and hundreds of skeletons stepped
+on the CPU every frame. Bake the animation instead — sample every clip once at load, write each
+frame's bone matrices into a float texture, give each instance one number for the frame it is on,
+and skin in the vertex shader upstream of instancing. The crowd becomes one draw whether there are
+six of them or six hundred. This is architectural and painful to retrofit, so do it from the first
+inhabitant, whatever species it is.
+
+**One writer for anything persisted.** The page owns the world-state file and writes it whole; the
+server only touches the agent's own records. If both write it, a save from a page holding older
+state silently drops every change made since that page loaded.
 
 ## Build in this order
 
-Order matters more than it looks, because each step makes the next one easier to judge.
+Each step makes the next easier to judge, and the temptation is always to start at step five.
 
-1. **The reader alone, printed to a terminal.** No graphics. You need to see what the data
-   actually looks like — how many threads, how stale, how many are duplicates of each other —
-   before any decision about drawing them means anything. Real session directories are messier
-   than you expect, and this shapes the whole design.
-2. **The world, empty.** Ground, sky, camera. No characters. Get the camera feeling right here,
-   because you will be using it constantly for everything after.
-3. **Regions and the layout rule.** Static fake data. The stickiness problem below lives here,
-   and it is far easier to reason about before anything is moving.
-4. **Dwellings.** Still fake data. One merged geometry and one draw call each.
-5. **Characters, instanced from the very start.** Not a per-character mesh you plan to optimise
-   later — the fix is architectural, not a tweak.
-6. **Behaviour, then navigation, then polish.**
-
-Resist starting at step 5. It is the fun part and the least useful thing to have working when
-the data underneath is still a guess.
-
-## The decisions that carry the whole thing
-
-### One instanced draw for every character
-
-Hand-animated clips are not instanceable the naive way: three.js skins a `SkinnedMesh` from a
-`Skeleton` per character, so hundreds of threads means hundreds of draw calls and hundreds of
-skeletons stepped on the CPU every frame.
-
-Bake instead. Sample every clip once at load, write each frame's bone matrices into a float
-texture, and give each instance a single number — the frame it is on. Skin in the vertex shader
-upstream of three's own instancing, so the skinned vertex still passes through `instanceMatrix`.
-The whole crowd becomes one draw whether there are six of them or six hundred.
-
-Anything a character *wears* is its own instanced mesh across the whole population, positioned
-by reading transforms written during the bake rather than by evaluating a skeleton.
-
-This is the highest-leverage decision here and the most painful to retrofit, which is why it
-belongs at step 5 rather than later.
-
-### The layout has to stay put
-
-The obvious implementation — sort regions by size, hand out ground in order — is wrong in a way
-that stays invisible until you actually use the thing. One new thread changes the sort, the sort
-changes the ground, and the entire map rearranges itself. A region you were watching jumps
-across the screen because a *different* repo gained a thread.
-
-Make the previous arrangement an input to the next one. Something that still needs the same
-amount of room keeps exactly the ground it had; something that grew keeps its ground and claims
-neighbours; something that shrank gives back what it claimed most recently, so growing and
-shrinking again returns it to the shape it started in. Only a never-placed region gets placed.
-Persist the result so the map survives a reload.
-
-Anchor each region to a fixed corner rather than the centre of the ground it happens to hold,
-or gaining a tile drags everything in it sideways.
-
-A map you can learn is the entire value proposition of doing this spatially. A map that
-reshuffles is worse than a list.
-
-### Decide state once
-
-Put the precedence in one ordered function — errored beats running beats finished beats waiting
-beats idle — and have both the character's behaviour and any list UI read it. If two places can
-disagree about what a thread is doing, eventually they will, and a character cheerfully working
-away next to a card saying it crashed destroys trust in the whole display.
-
-### One writer for anything you persist
-
-The page owns your state file and writes it whole; the server only touches the agent's own
-records. If both write it, a save from a page holding older state silently drops every change
-made since that page loaded. Write through a temp file and rename so a crash cannot truncate it.
-
-### Touch the agent's data as little as possible
-
-Read freely; write almost nothing. Bot Crossing sets exactly one archive flag on the agent's own
-session record and nothing else. That restraint is what makes it safe to point at a directory
-full of somebody's real work, and it is worth defending against every convenient-seeming
-exception.
-
-Expect the agent to overwrite your flag — these tools commonly rewrite session records from
-memory. Keep your own record of intent and re-assert it on the next scan rather than assuming a
-write stuck.
-
-## Rendering
-
-There is a set of graphics problems you will meet in roughly the order you build things, and
-each one looks like a small detail while being anything but. They are written up with the
-reasoning in **`references/rendering-traps.md`** — read it before writing the renderer rather
-than after. In short, it covers:
-
-- Raised ground has to clear the roughest terrain it could sit on, and scatter has to be rebuilt
-  when regions change shape.
-- Closed model-kit pieces must be single-sided; open procedural shells must be double-sided with
-  a back-side shadow pass. Getting it backwards gives either see-through hulls or a world of
-  flickering surfaces.
-- Generated primitives have the wrong UVs for anything you draw on them.
-- Render scale is a share of the *display's* resolution, not of CSS pixels.
-- A separable blur's taps must be spaced as a fraction of its radius.
-- Post chains with an odd number of buffer swaps alternate which target holds the scene, so
-  anything sampling depth must ask which buffer it is in this frame.
-- `matrixWorld` only refreshes during a render, so reading a world position after moving things
-  but before drawing gets a stale matrix.
-
-## Art without an artist
-
-Use CC0 model kits and do the work in a packer. The property to look for is not polygon count
-but whether every model shares **one** texture — that is what lets a many-part building merge to
-a single geometry and a single draw call.
-
-If that shared texture is a grid of flat swatches, a *cell index* becomes a stable name for a
-material, and one shader can repaint a single swatch into each region's colour, light the window
-swatch after dark, and give a flat texture real roughness and metalness per cell — no extra
-materials, no extra draws.
-
-Retargeting animations onto one skeleton is the step most people miss, and its failure mode is
-confusing: merging glTF documents brings each animation's private copy of the rig along, and the
-result loads without a single warning and renders everything in its bind pose. Details in
-**`references/asset-pipeline.md`**.
+1. **The reader alone, printed to a terminal.** No graphics. Real session directories are messier
+   than anyone expects, and everything downstream is shaped by what is actually there.
+2. **The world, empty.** Ground, sky, camera. Get the camera right here; it is used for the whole
+   rest of the build.
+3. **Territories and the layout rule**, on fake data — much easier before anything moves.
+4. **Structures**, still fake.
+5. **Inhabitants, instanced from the first one.**
+6. **States and behaviour**, then navigation, then interaction, then settings, then polish.
 
 ## Verify with numbers
 
-This kind of project fails quietly. A character walks through a wall once every few minutes; a
-blur is imperceptibly stronger on one machine; a path is subtly wrong. Instrument it and quote
-real figures rather than trusting your eye:
+This kind of project fails quietly — something clips a wall once every few minutes, a path is
+subtly wrong, an effect is imperceptibly stronger on one machine. Instrument it:
 
-- Paths run, and how many crossed something solid (target: zero).
-- Character-frames simulated, and how many penetrated geometry (target: zero).
-- How many characters settled, and the closest approach between any two.
+- Paths run, and how many crossed something solid. Target zero.
+- Frames simulated per inhabitant, and how many penetrated geometry. Target zero.
+- How many settled, and the closest approach between any two.
 - Draw calls at rest with the full population on screen.
-- Millisecond cost of each post-processing pass, measured with a GPU sync rather than
+- Cost in milliseconds of each post-processing pass, measured with a GPU sync rather than
   wall-clock guesswork.
 
-When you change something visual, render the same frame before and after and diff the pixels. A
+When changing something visual, render the same frame before and after and diff the pixels. A
 static scene that differs between frames is a bug, and a diff catches it when eyes will not.
 
-## Making it feel like a place
+## References
 
-A few things do disproportionate work once the mechanics are right:
-
-- **Give the camera weight.** Grabbing the ground and having the point under your cursor stay
-  pinned there is worth more than any amount of scene detail.
-- **Let characters route around things**, and apply collision separately on every step whether
-  or not a path is being followed. Routing can fail; walking through a wall must not be what
-  happens when it does.
-- **Choose animation from motion that actually happened**, not from intended velocity, or
-  characters moonwalk against walls.
-- **Vary the small clocks.** Blink timers, idle fidgets and wander legs should each run on their
-  own offset, or the crowd moves in unison and reads as a machine.
-- **Let quiet be quiet.** Most threads are idle most of the time. A world where nothing is
-  demanding attention should be pleasant to leave open, which is the whole point of an ambient
-  display.
+- `references/making-it-feel-alive.md` — the ambience and interaction catalogue, written to be
+  translated into any metaphor. Read it while designing behaviour.
+- `references/rendering-traps.md` — the graphics problems, roughly in the order they arrive, with
+  the reasoning. Read before writing the renderer.
+- `references/harness-adapters.md` — reading a coding agent's sessions, the normalised thread
+  shape, and how not to damage anyone's work.
+- `references/asset-pipeline.md` — decent models without an artist, and the animation-retargeting
+  step that is easy to miss.

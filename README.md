@@ -609,19 +609,24 @@ untouched, and the colony lays itself out again from scratch.
 
 ## Building your own
 
-Bot Crossing is one shape this idea can take. `.claude/skills/agent-session-world/` is a skill
-for building others — a village, an aquarium, a workshop, whatever metaphor you like — driven by
-the same underlying idea: your agent sessions already have state, and that state reads better as
-a place than as a list.
+Bot Crossing is one shape this idea can take. `.claude/skills/agent-session-world/` is a skill for
+building the others — fish in a reef, animals in a forest, villagers, ants, boats in a harbour.
+Whatever inhabits it, the structure underneath is the same: a layout that stays put so you can
+learn the map, one draw call for the whole crowd, a single source of truth for what a thread is
+doing, and a camera with weight.
 
-It covers picking the mapping from session state to world state, the order to build in, and the
-handful of decisions that carry the whole thing — instancing a crowd into one draw call, layouts
-that stay put instead of reshuffling, and reading a coding agent's session files without
-disturbing them. The reference files on
-[rendering](.claude/skills/agent-session-world/references/rendering-traps.md),
-[harness adapters](.claude/skills/agent-session-world/references/harness-adapters.md) and the
-[asset pipeline](.claude/skills/agent-session-world/references/asset-pipeline.md) stand on their
-own whether or not you build anything like this.
+It is written to take somebody's idea and fill in the frame around it, rather than to reproduce
+this particular colony. Four reference files carry the detail, and stand on their own whether or
+not you build anything like this:
+
+- [making it feel alive](.claude/skills/agent-session-world/references/making-it-feel-alive.md) —
+  ambience and interaction, written to translate into any metaphor
+- [rendering traps](.claude/skills/agent-session-world/references/rendering-traps.md) — the
+  graphics problems in roughly the order you meet them
+- [harness adapters](.claude/skills/agent-session-world/references/harness-adapters.md) — reading a
+  coding agent's sessions without disturbing them
+- [asset pipeline](.claude/skills/agent-session-world/references/asset-pipeline.md) — decent art
+  without an artist
 
 ## Who made this
 
