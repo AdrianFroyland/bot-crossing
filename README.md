@@ -216,10 +216,13 @@ The deep links above are the **Claude Code adapter's** business, not the colony'
 harness plugs its own in, and a harness with no deep link simply greys the button out. See
 [`server/harnesses/README.md`](server/harnesses/README.md).
 
-Plots are keyed by the folder's *name*, which is all the colony needs to draw one, so the
-path is read back off the threads standing there — taking the most common answer if two
-checkouts somehow share a basename. A repo that has moved or gone since the last scan fails
-at the server rather than handing `open` a dead path.
+Plots are keyed by the folder's *name*, which is all the colony needs to draw one, so the path
+is read back off the threads standing there. Where a name is ambiguous — `~/workspaces/1/foo`
+and `~/workspaces/2/foo`, which is what you get keeping parallel copies instead of worktrees —
+it grows leftward until it is not, and you get `1/foo` and `2/foo` on separate ground. Only
+names that actually collide change, because the name is also the key your saved layout is
+stored under and disambiguating everything would move every plot on the map. A repo that has
+moved or gone since the last scan fails at the server rather than handing `open` a dead path.
 
 Name plates are hit-tested in screen space rather than raycast: they are billboarded in the
 vertex shader, so a raycast would test the quad where it was authored rather than where it
