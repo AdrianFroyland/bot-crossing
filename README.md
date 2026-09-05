@@ -42,7 +42,7 @@ somebody writing that adapter.
 | [Codex CLI](https://developers.openai.com/codex/cli) (OpenAI) | ⬜ Not yet — transcripts found at `~/.codex/sessions/`, [notes here](server/harnesses/README.md#starting-points) |
 | [OpenCode](https://opencode.ai) | ⬜ Not yet |
 | [Antigravity CLI](https://antigravity.google) (Google) | ⬜ Not yet — the successor to Gemini CLI, which Google stopped serving individual accounts on 18 June 2026 |
-| [Cursor](https://cursor.com) (`cursor-agent`) | ⬜ Not yet |
+| **[Cursor](https://cursor.com)** (IDE / Agents Window) | ✅ **Supported** — reads `agent-transcripts` JSONL; Open/New open the repo folder (`cursor://file/…`), not a specific chat. CLI `cursor-agent` store is a different id space and is not scanned |
 | [Amp](https://ampcode.com) (Sourcegraph) | ⬜ Not yet |
 | [Aider](https://aider.chat) | ⬜ Not yet |
 | [Goose](https://block.github.io/goose/) (Block) | ⬜ Not yet |
@@ -609,6 +609,7 @@ server/
   harnesses/   one adapter per agent harness — README.md is the contract
     index.mjs    the registry: add your harness to the list here
     claude-code.mjs
+    cursor.mjs
   lib/         filesystem helpers the adapters share
   scan.mjs     harness-agnostic: asks every detected harness, merges, sorts
   api.mjs      /api/threads, /api/harnesses, /api/state, /api/open, /api/archive,

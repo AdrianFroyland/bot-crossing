@@ -137,6 +137,11 @@ Verified on a real machine:
   (`%APPDATA%\Claude\claude-code-sessions\…` on Windows); CLI transcripts in
   `~/.claude/projects/<encoded-cwd>/<sessionId>.jsonl`; live processes in
   `~/.claude/sessions/*.json`. Implemented in `claude-code.mjs`.
+- **Cursor** — IDE transcripts in
+  `~/.cursor/projects/<slug>/agent-transcripts/<uuid>/<uuid>.jsonl` (skip `subagents/`).
+  Implemented in `cursor.mjs`. The `cursor-agent` CLI store under `~/.cursor/chats` is a
+  different session id space: do not `--resume` an IDE transcript id. No `cursor://` form
+  opens an existing chat; Open hands the OS a folder URL. Archive is colony-only.
 - **Codex CLI** — transcripts in `~/.codex/sessions/YYYY/MM/DD/rollout-<iso>-<uuid>.jsonl`,
   with records shaped `{ timestamp, type, payload }`, and what looks like an index at
   `~/.codex/session_index.jsonl`. Not implemented yet.
