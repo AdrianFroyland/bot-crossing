@@ -18,6 +18,7 @@ import os from 'node:os'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { exists, jsonLines, listDirs, readHead } from '../lib/fsutil.mjs'
+import { projectOf } from '../lib/project.mjs'
 
 const execFileAsync = promisify(execFile)
 const HOME = os.homedir()
@@ -26,7 +27,6 @@ const PROJECTS = path.join(HOME, '.cursor', 'projects')
 const HEAD_BYTES = 192 * 1024
 const ACTIVE_WINDOW_MS = 30 * 60 * 1000
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const WORKTREE = /[\\/]\.cursor[\\/]worktrees[\\/][^\\/]+[\\/]([^\\/]+)/
 
 function skipSlug(name) {
   if (!name || name.startsWith('.')) return true
@@ -77,12 +77,6 @@ async function projectPathFor(slug) {
   const projectPath = await decodeSlug(slug)
   pathCache.set(slug, projectPath)
   return projectPath
-}
-
-function splitWorktree(cwd) {
-  const m = WORKTREE.exec(cwd || '')
-  if (!m) return { root: cwd, worktree: '' }
-  return { root: cwd.slice(0, m.index), worktree: m[1] }
 }
 
 function firstText(content) {
@@ -174,10 +168,9 @@ async function scanThreads() {
     const transcriptsDir = path.join(projectDir, 'agent-transcripts')
     if (!(await exists(transcriptsDir))) continue
 
-    const projectPath = await projectPathFor(slug)
-    const pathExists = await exists(projectPath)
-    const { worktree } = splitWorktree(projectPath)
-    const project = path.basename(pathExists ? projectPath : projectPath.replace(/\\/g, '/')) || slug
+    const decodedPath = await projectPathFor(slug)
+    const pathExists = await exists(decodedPath)
+    const { project, projectPath, worktree } = projectOf(decodedPath)
 
     for (const sessionDir of await listDirs(transcriptsDir)) {
       const sessionId = path.basename(sessionDir)
@@ -201,7 +194,7 @@ async function scanThreads() {
         project,
         projectPath,
         worktree,
-        cwd: projectPath,
+        cwd: decodedPath,
         gitBranch: '',
         model: '',
         effort: '',
@@ -217,7 +210,7 @@ async function scanThreads() {
         source: 'ide',
         canOpen: pathExists,
         canArchive: false,
-        ref: { sessionId, projectPath },
+        ref: { sessionId, projectPath: decodedPath },
       })
     }
   }

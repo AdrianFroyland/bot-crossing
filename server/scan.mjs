@@ -19,6 +19,10 @@ import { HARNESSES, detectedHarnesses, harnessById } from './harnesses/index.mjs
  * name is also the key a saved layout is stored under, so disambiguating unconditionally would
  * move every plot on everybody's map to fix something most people never hit.
  */
+function pathSegments(p) {
+  return String(p || '').replace(/\\/g, '/').split('/').filter(Boolean)
+}
+
 function disambiguateProjects(threads) {
   const pathsByName = new Map()
   for (const t of threads) {
@@ -31,7 +35,7 @@ function disambiguateProjects(threads) {
   for (const [name, paths] of pathsByName) {
     if (paths.size < 2) continue
     const list = [...paths]
-    const segments = list.map((p) => p.split('/').filter(Boolean))
+    const segments = list.map((p) => pathSegments(p))
     const deepest = Math.max(...segments.map((s) => s.length))
 
     // Take one more trailing segment until every path in the group reads differently. Paths

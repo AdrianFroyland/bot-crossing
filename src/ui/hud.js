@@ -59,6 +59,7 @@ export class Hud {
     this.actions = actions
     this.visible = true
     this._last = {}
+    this._hiddenCount = 0
 
     this.el = document.createElement('div')
     this.el.className = 'hud'
@@ -222,6 +223,13 @@ export class Hud {
     // View.
     const view = group('View')
     view.append(
+      this._toggle('Hide dormant threads', 'hideDormant', 'Threads idle for more than three days.'),
+      this._select('Max thread age', 'threadRecencyDays', [
+        ['0', 'All'],
+        ['7', '7 days'],
+        ['30', '30 days'],
+        ['90', '90 days'],
+      ], 'Extra cap on how far back to show, beyond dormant.'),
       this._toggle('Return to isometric', 'autoFrame', 'Eases the angle back when you stop dragging.'),
       this._slider('Field of view', 'fov', 20, 60, 1, (v) => `${v}°`),
       this._toggle('Project labels', 'showLabels'),
@@ -269,7 +277,11 @@ export class Hud {
       o.textContent = text
       sel.appendChild(o)
     }
-    sel.addEventListener('change', () => this.settings.set(key, sel.value))
+    sel.addEventListener('change', () => {
+      const raw = sel.value
+      const value = key === 'threadRecencyDays' ? Number(raw) : raw
+      this.settings.set(key, value)
+    })
     row.appendChild(sel)
     this.controls.push({
       el: row,
@@ -370,13 +382,24 @@ export class Hud {
     }
   }
 
+  setHiddenCount(n) {
+    this._hiddenCount = Math.max(0, n | 0)
+    if (!this._legendProjects) return
+    this._last.legend = ''
+    this.setLegend(this._legendProjects, this._legendActive)
+  }
+
   /**
    * Every repo, in the sidebar. This was a strip of chips along the bottom of the screen;
    * it is a list now because the sidebar is where all the chrome lives, and because a list
    * can carry a count and an alarm without running out of room at eleven repos.
    */
   setLegend(projects, activeName = null) {
-    const signature = projects.map((p) => `${p.name}:${p.count}:${p.accent}:${p.urgent ? 1 : 0}`).join('|') + `~${activeName}`
+    this._legendProjects = projects
+    this._legendActive = activeName
+    const signature =
+      projects.map((p) => `${p.name}:${p.count}:${p.accent}:${p.urgent ? 1 : 0}`).join('|') +
+      `~${activeName}~${this._hiddenCount}`
     if (this._last.legend === signature) return
     this._last.legend = signature
 
@@ -396,7 +419,9 @@ export class Hud {
       b.addEventListener('click', () => this.actions.pickProject?.(p.name))
       wrap.appendChild(b)
     }
-    this.$('.sec-head span').textContent = `${projects.length} repo${projects.length === 1 ? '' : 's'}`
+    let head = `${projects.length} repo${projects.length === 1 ? '' : 's'}`
+    if (this._hiddenCount > 0) head += ` · ${this._hiddenCount} hidden`
+    this.$('.sec-head span').textContent = head
   }
 
   /**
@@ -517,6 +542,11 @@ export class Hud {
     // often is how a HUD starts costing frames.
     this._cardSize = { w: card.offsetWidth, h: card.offsetHeight }
     this.$('#btn-open').disabled = thread.canOpen === false
+    const archiveBtn = this.$('#btn-archive')
+    archiveBtn.disabled = false
+    archiveBtn.title = thread.canArchive
+      ? 'Archive — this astronaut walks back to the ship (A)'
+      : 'Archive here — colony only, not in Cursor (A)'
   }
 
   /**
@@ -764,7 +794,8 @@ function statusClass(status) {
  * leading `~`, so the trim is done here and the whole path lives in the title attribute.
  */
 function shortPath(dir, max = 30) {
-  const home = dir.replace(/^\/Users\/[^/]+/, '~')
+  const normalized = String(dir).replace(/\\/g, '/')
+  const home = normalized.replace(/^\/Users\/[^/]+/, '~').replace(/^([A-Za-z]):/, '~$1:')
   if (home.length <= max) return home
   const parts = home.split('/')
   let out = parts.pop() || ''
@@ -889,7 +920,7 @@ const TEMPLATE = `
 <div class="help">
   <div class="sheet panel">
     <h2>Bot Crossing</h2>
-    <p class="sub">Every coding-agent thread on this Mac is an astronaut. They walk out of the ship, claim a plot for their repo, and build. Click one to open its thread; click a zone — its deck or its name — for the repo itself, and start a new conversation there. Navigation works like Google Earth — drag the ground itself, right-drag to tilt, scroll to zoom in on whatever is under the cursor.</p>
+    <p class="sub">Every coding-agent thread on this Mac is an astronaut. They walk out of the ship, claim a plot for their repo, and build. Click one to open its thread; click a zone — its deck or its name — for the repo itself, and start a new conversation there. Navigation works like Google Earth — drag the ground itself, right-drag to tilt, scroll to zoom in on whatever is under the cursor. Settings can hide dormant threads and cap how far back the colony looks.</p>
     <div class="cols">
       <div>
         <div class="k"><span>Drag the ground</span><kbd>drag</kbd></div>

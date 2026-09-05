@@ -18,6 +18,7 @@ import {
   newSession,
   revealFolder,
 } from './game/api.js'
+import { filterVisibleThreads, isThreadVisible } from './game/threads.js'
 
 /**
  * Boot and the outer game loop.
@@ -49,6 +50,8 @@ const colony = new Colony(engine.scene, settings, engine.camera, engine.renderer
 
 let state = { archived: [], archivedAt: {}, opened: [], plots: {}, seen: {} }
 let threads = []
+/** Threads hidden by dormant / recency filters — full scan stays in `threads`. */
+let hiddenCount = 0
 /** Last legend built for the bottom bar, kept so the open zone's chip can light up between polls. */
 let legendProjects = []
 /** The zone layout as last written to the colony file, so an unchanged map is not re-saved. */
@@ -538,28 +541,50 @@ window.addEventListener('keydown', (e) => {
 
 // ── data ──────────────────────────────────────────────────────────────────────────────
 
+function visibilityOpts(archivedSet) {
+  return {
+    hideDormant: settings.get('hideDormant') !== false,
+    threadRecencyDays: Number(settings.get('threadRecencyDays')) || 0,
+    archivedIds: archivedSet,
+  }
+}
+
 function applyThreads(list) {
   threads = list
   const archivedSet = new Set(state.archived)
-  const stats = colony.setThreads(list, archivedSet)
+  const opts = visibilityOpts(archivedSet)
+  const now = Date.now()
+  const visible = filterVisibleThreads(list, opts, now)
+  hiddenCount = list.filter((t) => !t.archived && !archivedSet.has(t.id)).length - visible.length
+
+  const stats = colony.setThreads(visible, archivedSet)
   hud.setStats(stats)
+  hud.setHiddenCount(hiddenCount)
 
   legendProjects = colony.plotOrder
     .map((plot) => ({
       name: plot.name,
       accent: plot.accent,
-      count: list.filter((t) => !t.archived && !archivedSet.has(t.id) && t.project === plot.name).length,
+      count: visible.filter((t) => t.project === plot.name).length,
       urgent: colony.urgentPlots?.has(plot.id) ?? false,
     }))
     .sort((a, b) => b.count - a.count)
 
-  // Keep the card honest if the thread it is showing changed underneath it.
   if (selectedId) {
+    const hidden =
+      !isThreadVisible(
+        list.find((t) => t.id === selectedId) || { id: selectedId, archived: true },
+        opts,
+        now
+      )
     const still = colony.agentFor(selectedId)
-    if (still) hud.setSelection(still, list.find((t) => t.id === selectedId) || still.thread)
-    else select(null, {})
+    if (hidden) {
+      select(null, {})
+      hud.toast('Thread hidden by filter')
+    } else if (still) {
+      hud.setSelection(still, list.find((t) => t.id === selectedId) || still.thread)
+    } else select(null, {})
   }
-  // Which also repaints the legend, so the open zone's chip is lit by the same pass.
   syncProject()
 
   // Zones only move when their own footprint changes, and when one does the colony file
@@ -656,7 +681,9 @@ settings.onChange((changed, scope) => {
   if (scope.render || changed.has('fov')) engine.applySettings()
   colony.onSettingsChanged(changed, scope)
   if (changed.has('showFps')) hud.syncSettings()
-  if (changed.has('maxAgents')) applyThreads(threads)
+  if (changed.has('maxAgents') || changed.has('hideDormant') || changed.has('threadRecencyDays')) {
+    applyThreads(threads)
+  }
 })
 
 // ── frame ─────────────────────────────────────────────────────────────────────────────

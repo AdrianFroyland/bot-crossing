@@ -3,6 +3,9 @@ import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js'
 import { buildFaceAtlas, FACE, FACE_LOOPS, FRAME_COLS, FRAME_ROWS } from './faces.js'
 import { attachMatrixAt, decorateSkinned, frameFor } from './crew.js'
 
+/** Roster cap precedence — keep in sync with `STATUS_ORDER` in colony.js. */
+const ROSTER_RANK = ['blocked', 'waiting', 'working', 'celebrating', 'idle', 'sleeping']
+
 /**
  * Every astronaut in the colony, drawn in seven draw calls.
  *
@@ -460,7 +463,15 @@ export class Astronauts {
     this.roster = entries
     this.world = world || this.world
     const cap = Math.min(this.capacity, this.settings.get('maxAgents'))
-    const wanted = entries.slice(0, cap)
+    const wanted = [...entries]
+      .sort((a, b) => {
+        const rank = ROSTER_RANK.indexOf(a.status) - ROSTER_RANK.indexOf(b.status)
+        if (rank) return rank
+        const act = (b.thread?.lastActivityAt || 0) - (a.thread?.lastActivityAt || 0)
+        if (act) return act
+        return a.id.localeCompare(b.id)
+      })
+      .slice(0, cap)
     const seen = new Set()
 
     for (const entry of wanted) {

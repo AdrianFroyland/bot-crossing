@@ -51,6 +51,7 @@ const HEAD_BYTES = 192 * 1024
  * warmed ones sat 16 hours to 3 days idle while genuinely active work was minutes old.
  */
 const ACTIVE_WINDOW_MS = 30 * 60 * 1000
+const STALE_MS = 3 * 24 * 60 * 60 * 1000
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const DESKTOP_ID = /^local_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -341,11 +342,17 @@ async function scanThreads() {
   }
 
   const threads = [...byId.values()]
-  // Unread = the thread moved on after you last looked at it; never opened counts as unread.
-  // Terminal-only threads have no focus history at all, so "unread" is unknowable — not true.
+  // Unread = the thread moved on after you last looked at it. Never-opened desktop threads
+  // only count when still recent — otherwise every ancient ghost with lastFocusedAt 0 reads
+  // as "waiting on you" forever.
   const now = Date.now()
   for (const thread of threads) {
-    thread.unread = thread.desktopSessionIds.length > 0 && thread.lastActivityAt > thread.lastFocusedAt
+    const movedSinceFocus = thread.lastActivityAt > thread.lastFocusedAt
+    const recent = now - thread.lastActivityAt < STALE_MS
+    thread.unread =
+      thread.desktopSessionIds.length > 0 &&
+      movedSinceFocus &&
+      (thread.lastFocusedAt > 0 || recent)
     thread.running = thread.hasLiveProcess && now - thread.lastActivityAt < ACTIVE_WINDOW_MS
   }
   return threads.map(toThread)
