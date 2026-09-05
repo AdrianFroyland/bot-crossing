@@ -7,6 +7,7 @@
  */
 
 const STORE_KEY = 'botcrossing.settings.v1'
+const TILT_OFF_MIGRATION = 'botcrossing.migrate.tiltOff.v1'
 
 /**
  * What a fresh install opens on. Fixed rather than guessed from the device: `autoQuality`
@@ -70,7 +71,7 @@ export const PRESETS = {
       maxAgents: 90,
       stars: true,
       ibl: true,
-      tiltShift: true,
+      tiltShift: false,
     },
   },
   high: {
@@ -88,7 +89,7 @@ export const PRESETS = {
       maxAgents: 140,
       stars: true,
       ibl: true,
-      tiltShift: true,
+      tiltShift: false,
     },
   },
   ultra: {
@@ -106,7 +107,7 @@ export const PRESETS = {
       maxAgents: 200,
       stars: true,
       ibl: true,
-      tiltShift: true,
+      tiltShift: false,
     },
   },
 }
@@ -139,6 +140,10 @@ const DEFAULTS = {
   showFps: false,
   showLabels: true,
   reducedMotion: false,
+
+  // Thread visibility — dormant is >3 days idle (same threshold as sleeping status)
+  hideDormant: true,
+  threadRecencyDays: 0, // 0 = no extra age cap; 7 / 30 / 90 in settings
 }
 
 /** Keys whose change forces a full rebuild of the world (terrain, scatter, sky). */
@@ -253,7 +258,12 @@ export class Settings {
 function load() {
   try {
     const raw = JSON.parse(localStorage.getItem(STORE_KEY) || '{}')
-    return raw && typeof raw === 'object' ? raw : {}
+    if (!raw || typeof raw !== 'object') return {}
+    if (localStorage.getItem(TILT_OFF_MIGRATION) !== '1') {
+      raw.tiltShift = false
+      localStorage.setItem(TILT_OFF_MIGRATION, '1')
+    }
+    return raw
   } catch {
     return {}
   }

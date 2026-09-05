@@ -64,8 +64,9 @@ export function statusFor(thread, now = Date.now()) {
   if (thread.hasError) return 'blocked'
   if (thread.running) return 'working'
   if (thread.prState === 'MERGED') return 'celebrating'
-  if (thread.unread) return 'waiting'
-  if (now - thread.lastActivityAt > STALE_MS) return 'sleeping'
+  const stale = now - thread.lastActivityAt > STALE_MS
+  if (thread.unread && !stale) return 'waiting'
+  if (stale) return 'sleeping'
   return 'idle'
 }
 
@@ -289,8 +290,14 @@ export class Colony {
     for (const [name, list] of projects) {
       const plot = this.plots.get(name)
       if (!plot) continue
-      // Oldest thread first, so a given session keeps its slot as siblings come and go.
-      list.sort((a, b) => a.createdAt - b.createdAt)
+      // Urgent and recent first so the astronaut cap and sidebar match what matters.
+      list.sort((a, b) => {
+        const rank = STATUS_ORDER.indexOf(statusFor(a, now)) - STATUS_ORDER.indexOf(statusFor(b, now))
+        if (rank) return rank
+        const act = (b.lastActivityAt || 0) - (a.lastActivityAt || 0)
+        if (act) return act
+        return (a.createdAt || 0) - (b.createdAt || 0)
+      })
 
       list.forEach((thread, i) => {
         const status = statusFor(thread, now)
